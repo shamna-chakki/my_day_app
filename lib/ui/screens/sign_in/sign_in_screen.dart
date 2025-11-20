@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:my_day_app/ui/screens/forgot_password/forgot_password_screen.dart';
 
 class SignInScreen extends StatelessWidget {
   const SignInScreen({super.key});
@@ -119,7 +120,7 @@ class _SignInScreenMainBlockState extends State<SignInScreenMainBlock> with Sing
   Widget _buildTabBar() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.5),
+        color: Color(0x80FFFFFF).withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(30),
       ),
       child: TabBar(
@@ -187,7 +188,7 @@ class _SignInScreenMainBlockState extends State<SignInScreenMainBlock> with Sing
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: () {
-                // Handle forgot password
+                Navigator.push(context, MaterialPageRoute(builder: (context) => ForgotPasswordScreen(),));
               },
               child: Text(
                 'Forgot Password?',
