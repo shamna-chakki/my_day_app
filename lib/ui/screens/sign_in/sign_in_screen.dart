@@ -137,7 +137,7 @@ class _SignInScreenMainBlockState extends State<SignInScreenMainBlock> with Sing
           fontWeight: FontWeight.w600,
         ),
         tabs: const [
-          Tab(text: 'Sign In'),
+          Tab(text: 'Login'),
           Tab(text: 'Register'),
         ],
       ),
