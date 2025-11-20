@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../sign_in/sign_in_screen.dart';
+
 class OnboardingScreen extends StatelessWidget {
   const OnboardingScreen({super.key});
 
@@ -264,9 +266,7 @@ class _MainBlockState extends State<MainBlock> with TickerProviderStateMixin {
               curve: Curves.easeInOut,
             );
           } else {
-            // Navigate to main app
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Welcome to the app!')),
+            Navigator.push(context, MaterialPageRoute(builder: (context) => SignInScreen(),)
             );
           }
         },
