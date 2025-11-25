@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:my_day_app/ui/screens/forgot_password/forgot_password_screen.dart';
+import 'package:my_day_app/ui/screens/home/home_screen.dart';
+import 'package:my_day_app/utils/page_navigation_routes.dart';
 
 class SignInScreen extends StatelessWidget {
   const SignInScreen({super.key});
@@ -188,7 +190,8 @@ class _SignInScreenMainBlockState extends State<SignInScreenMainBlock> with Sing
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => ForgotPasswordScreen(),));
+                // Navigator.push(context, MaterialPageRoute(builder: (context) => ForgotPasswordScreen(),));
+                Navigator.pushNamed(context, PageNavigationRoutes.forgotPasswordScreen);
               },
               child: Text(
                 'Forgot Password?',
@@ -202,10 +205,8 @@ class _SignInScreenMainBlockState extends State<SignInScreenMainBlock> with Sing
           const SizedBox(height: 24),
           _buildButton('Sign In', () {
             if (_formKey.currentState!.validate()) {
-              // Handle sign in
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Signing in...')),
-              );
+              // Navigator.push(context, MaterialPageRoute(builder: (context) => HomeScreen(),));
+              Navigator.pushNamed(context, PageNavigationRoutes.homeScreen);
             }
           }),
         ],
