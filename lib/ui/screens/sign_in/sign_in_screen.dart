@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:my_day_app/ui/screens/forgot_password/forgot_password_screen.dart';
-import 'package:my_day_app/ui/screens/home/home_screen.dart';
 import 'package:my_day_app/utils/page_navigation_routes.dart';
+
+import '../../widgets/custom_button.dart';
+import '../../widgets/custom_text_field.dart';
 
 class SignInScreen extends StatelessWidget {
   const SignInScreen({super.key});
-
 
   @override
   Widget build(BuildContext context) {
@@ -21,19 +21,17 @@ class SignInScreenMainBlock extends StatefulWidget {
   State<SignInScreenMainBlock> createState() => _SignInScreenMainBlockState();
 }
 
-class _SignInScreenMainBlockState extends State<SignInScreenMainBlock> with SingleTickerProviderStateMixin {
+class _SignInScreenMainBlockState extends State<SignInScreenMainBlock>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _formKey = GlobalKey<FormState>();
+  final _regFormKey = GlobalKey<FormState>();
 
   // Controllers
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-
-  // Password visibility
-  bool _isPasswordVisible = false;
-  bool _isConfirmPasswordVisible = false;
 
   @override
   void initState() {
@@ -77,9 +75,7 @@ class _SignInScreenMainBlockState extends State<SignInScreenMainBlock> with Sing
                             const SizedBox(height: 40),
                             _buildTabBar(),
                             const SizedBox(height: 32),
-                            Expanded(
-                              child: _buildTabContent(),
-                            ),
+                            Expanded(child: _buildTabContent()),
                           ],
                         ),
                       ),
@@ -127,7 +123,7 @@ class _SignInScreenMainBlockState extends State<SignInScreenMainBlock> with Sing
       ),
       child: TabBar(
         controller: _tabController,
-        indicator:  BoxDecoration(
+        indicator: BoxDecoration(
           color: Color(0xFFA2AF9B),
           borderRadius: BorderRadius.circular(10),
         ),
@@ -152,10 +148,7 @@ class _SignInScreenMainBlockState extends State<SignInScreenMainBlock> with Sing
       height: 500,
       child: TabBarView(
         controller: _tabController,
-        children: [
-          _buildSignInForm(),
-          _buildRegisterForm(),
-        ],
+        children: [_buildSignInForm(), _buildRegisterForm()],
       ),
     );
   }
@@ -166,32 +159,29 @@ class _SignInScreenMainBlockState extends State<SignInScreenMainBlock> with Sing
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildTextField(
+          CustomTextField(
             label: 'Email ID',
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
-            validator: _validateEmail,
+            validatorType: "email",
           ),
           const SizedBox(height: 20),
-          _buildTextField(
+
+          CustomTextField(
             label: 'Password',
             controller: _passwordController,
             isPassword: true,
-            isPasswordVisible: _isPasswordVisible,
-            onTogglePassword: () {
-              setState(() {
-                _isPasswordVisible = !_isPasswordVisible;
-              });
-            },
-            validator: _validatePassword,
+            validatorType: "password",
           ),
           const SizedBox(height: 12),
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: () {
-                // Navigator.push(context, MaterialPageRoute(builder: (context) => ForgotPasswordScreen(),));
-                Navigator.pushNamed(context, PageNavigationRoutes.forgotPasswordScreen);
+                Navigator.pushNamed(
+                  context,
+                  PageNavigationRoutes.forgotPasswordScreen,
+                );
               },
               child: Text(
                 'Forgot Password?',
@@ -203,12 +193,16 @@ class _SignInScreenMainBlockState extends State<SignInScreenMainBlock> with Sing
             ),
           ),
           const SizedBox(height: 24),
-          _buildButton('Sign In', () {
-            if (_formKey.currentState!.validate()) {
-              // Navigator.push(context, MaterialPageRoute(builder: (context) => HomeScreen(),));
-              Navigator.pushNamed(context, PageNavigationRoutes.homeScreen);
-            }
-          }),
+
+          CustomButton(
+            text: "Login",
+            onPressed: () {
+              if (_formKey.currentState!.validate()) {
+                // Navigator.push(context, MaterialPageRoute(builder: (context) => HomeScreen(),));
+                Navigator.pushNamed(context, PageNavigationRoutes.homeScreen);
+              }
+            },
+          ),
         ],
       ),
     );
@@ -216,192 +210,203 @@ class _SignInScreenMainBlockState extends State<SignInScreenMainBlock> with Sing
 
   Widget _buildRegisterForm() {
     return Form(
+      key: _regFormKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildTextField(
-            label: 'User Name',
+          CustomTextField(
+            label: "Name",
             controller: _nameController,
-            validator: _validateName,
+            validatorType: "name",
           ),
           const SizedBox(height: 20),
-          _buildTextField(
+
+          CustomTextField(
             label: 'Email ID',
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
-            validator: _validateEmail,
+            validatorType: "email",
           ),
           const SizedBox(height: 20),
-          _buildTextField(
+
+          CustomTextField(
             label: 'Password',
             controller: _passwordController,
             isPassword: true,
-            isPasswordVisible: _isPasswordVisible,
-            onTogglePassword: () {
-              setState(() {
-                _isPasswordVisible = !_isPasswordVisible;
-              });
-            },
-            validator: _validatePassword,
+            validatorType: "password",
           ),
           const SizedBox(height: 20),
-          _buildTextField(
+
+          CustomTextField(
             label: 'Re-Enter Password',
             controller: _confirmPasswordController,
             isPassword: true,
-            isPasswordVisible: _isConfirmPasswordVisible,
-            onTogglePassword: () {
-              setState(() {
-                _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
-              });
-            },
-            validator: (value) {
-              if (value != _passwordController.text) {
-                return 'Passwords do not match';
-              }
-              return null;
-            },
+            validatorType: "confirm",
+            compareWith: _passwordController, // ✅ IMPORTANT
           ),
           const SizedBox(height: 32),
-          _buildButton('Register', () {
-            // Handle register
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Registering...')),
-            );
-          }),
+
+          CustomButton(
+            text: "Register",
+            onPressed: () {
+              // ✅ Correct form being validated
+              if (_regFormKey.currentState!.validate()) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Registering...')),
+                );
+              }
+            },
+          ),
         ],
       ),
     );
   }
-
-  Widget _buildTextField({
-    required String label,
-    required TextEditingController controller,
-    TextInputType? keyboardType,
-    bool isPassword = false,
-    bool isPasswordVisible = false,
-    VoidCallback? onTogglePassword,
-    String? Function(String?)? validator,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.openSans(
-            fontSize: 14,
-            color: const Color(0xFF6C6767),
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          obscureText: isPassword && !isPasswordVisible,
-          validator: validator,
-          style: GoogleFonts.openSans(
-            color: const Color(0xFF6C6767),
-          ),
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: Color(0x80FFFFFF).withValues(alpha: 0.2),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(30),
-              borderSide: BorderSide(
-                color: const Color(0xFF6C6767).withValues(alpha: 0.3),
-              ),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(30),
-              borderSide: BorderSide(
-                color: const Color(0xFF6C6767).withValues(alpha: 0.3),
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(30),
-              borderSide: const BorderSide(
-                color: Color(0xFFA2AF9B),
-                width: 2,
-              ),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(30),
-              borderSide: const BorderSide(
-                color: Colors.red,
-              ),
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 24,
-              vertical: 14,
-              // vertical: 16,
-            ),
-            suffixIcon: isPassword
-                ? IconButton(
-              icon: Icon(
-                isPasswordVisible
-                    ? Icons.visibility_outlined
-                    : Icons.visibility_off_outlined,
-                color: const Color(0xFF6C6767),
-              ),
-              onPressed: onTogglePassword,
-            )
-                : null,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildButton(String text, VoidCallback onPressed) {
-    return SizedBox(
-      height: 56,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFA2AF9B),
-          foregroundColor: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
-          ),
-        ),
-        child: Text(
-          text,
-          style: GoogleFonts.openSans(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-      ),
-    );
-  }
-
-  String? _validateName(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter your name';
-    }
-    return null;
-  }
-
-  String? _validateEmail(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter your email';
-    }
-    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-      return 'Please enter a valid email';
-    }
-    return null;
-  }
-
-  String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter your password';
-    }
-    if (value.length < 6) {
-      return 'Password must be at least 6 characters';
-    }
-    return null;
-  }
 }
+  // Widget _buildRegisterForm() {
+  //   return Form(
+  //     key: _regFormKey,
+  //     child: Column(
+  //       crossAxisAlignment: CrossAxisAlignment.stretch,
+  //       children: [
+  //         CustomTextField(
+  //           label: "Name",
+  //           controller: _nameController,
+  //           validatorType: "name",
+  //         ),
+  //         const SizedBox(height: 20),
+  //
+  //         CustomTextField(
+  //           label: 'Email ID',
+  //           controller: _emailController,
+  //           keyboardType: TextInputType.emailAddress,
+  //           validatorType: "email",
+  //         ),
+  //         const SizedBox(height: 20),
+  //
+  //         CustomTextField(
+  //           label: 'Password',
+  //           controller: _passwordController,
+  //           isPassword: true,
+  //           validatorType: "password",
+  //         ),
+  //         const SizedBox(height: 20),
+  //
+  //         CustomTextField(
+  //           label: 'Re-Enter Password',
+  //           controller: _confirmPasswordController,
+  //           isPassword: true,
+  //           validatorType: "confirm",
+  //         ),
+  //         const SizedBox(height: 32),
+  //         CustomButton(
+  //           text: "Register",
+  //           onPressed: () {
+  //             if (_formKey.currentState!.validate()) {
+  //               ScaffoldMessenger.of(
+  //                 context,
+  //               ).showSnackBar(const SnackBar(content: Text('Registering...')));
+  //             }
+  //           },
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
+
+
+// Widget _buildTextField({
+//   required String label,
+//   required TextEditingController controller,
+//   TextInputType? keyboardType,
+//   bool isPassword = false,
+//   bool isPasswordVisible = false,
+//   VoidCallback? onTogglePassword,
+//   String? Function(String?)? validator,
+// }) {
+//   return Column(
+//     crossAxisAlignment: CrossAxisAlignment.start,
+//     children: [
+//       Text(
+//         label,
+//         style: GoogleFonts.openSans(
+//           fontSize: 14,
+//           color: const Color(0xFF6C6767),
+//           fontWeight: FontWeight.w600,
+//         ),
+//       ),
+//       const SizedBox(height: 8),
+//       TextFormField(
+//         controller: controller,
+//         keyboardType: keyboardType,
+//         obscureText: isPassword && !isPasswordVisible,
+//         validator: validator,
+//         style: GoogleFonts.openSans(color: const Color(0xFF6C6767)),
+//         decoration: InputDecoration(
+//           filled: true,
+//           fillColor: Color(0x80FFFFFF).withValues(alpha: 0.2),
+//           border: OutlineInputBorder(
+//             borderRadius: BorderRadius.circular(30),
+//             borderSide: BorderSide(
+//               color: const Color(0xFF6C6767).withValues(alpha: 0.3),
+//             ),
+//           ),
+//           enabledBorder: OutlineInputBorder(
+//             borderRadius: BorderRadius.circular(30),
+//             borderSide: BorderSide(
+//               color: const Color(0xFF6C6767).withValues(alpha: 0.3),
+//             ),
+//           ),
+//           focusedBorder: OutlineInputBorder(
+//             borderRadius: BorderRadius.circular(30),
+//             borderSide: const BorderSide(color: Color(0xFFA2AF9B), width: 2),
+//           ),
+//           errorBorder: OutlineInputBorder(
+//             borderRadius: BorderRadius.circular(30),
+//             borderSide: const BorderSide(color: Colors.red),
+//           ),
+//           contentPadding: const EdgeInsets.symmetric(
+//             horizontal: 24,
+//             vertical: 14,
+//             // vertical: 16,
+//           ),
+//           suffixIcon: isPassword
+//               ? IconButton(
+//                   icon: Icon(
+//                     isPasswordVisible
+//                         ? Icons.visibility_outlined
+//                         : Icons.visibility_off_outlined,
+//                     color: const Color(0xFF6C6767),
+//                   ),
+//                   onPressed: onTogglePassword,
+//                 )
+//               : null,
+//         ),
+//       ),
+//     ],
+//   );
+// }
+
+// Widget _buildButton(String text, VoidCallback onPressed) {
+//   return SizedBox(
+//     height: 56,
+//     child: ElevatedButton(
+//       onPressed: onPressed,
+//       style: ElevatedButton.styleFrom(
+//         backgroundColor: const Color(0xFFA2AF9B),
+//         foregroundColor: Colors.white,
+//         elevation: 0,
+//         shape: RoundedRectangleBorder(
+//           borderRadius: BorderRadius.circular(30),
+//         ),
+//       ),
+//       child: Text(
+//         text,
+//         style: GoogleFonts.openSans(
+//           fontSize: 18,
+//           fontWeight: FontWeight.w600,
+//           color: Colors.white,
+//         ),
+//       ),
+//     ),
+//   );
+// }

@@ -2,6 +2,7 @@ import 'package:curved_labeled_navigation_bar/curved_navigation_bar_item.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:curved_labeled_navigation_bar/curved_navigation_bar.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:my_day_app/ui/screens/home/home_screen.dart';
 // Add more screen imports if needed
 
@@ -35,6 +36,7 @@ class _MainTabScreenState extends State<MainTabScreen>
       const HomeScreen(),
       const Center(child: Text("Search Screen")),
       const Center(child: Text("Profile Screen")),
+
     ];
   }
 
@@ -63,8 +65,8 @@ class _MainTabScreenState extends State<MainTabScreen>
         // ★ Modern Curved Navigation Bar
         bottomNavigationBar: CurvedNavigationBar(
           index: _currentIndex,
-          color: Colors.blueAccent,
-          buttonBackgroundColor: Colors.white,
+          color: Color(0xFFA2AF9B),
+          buttonBackgroundColor: Color(0xFF829877),
           backgroundColor: Colors.transparent,
           animationDuration: const Duration(milliseconds: 350),
 
@@ -72,19 +74,24 @@ class _MainTabScreenState extends State<MainTabScreen>
             setState(() => _currentIndex = index);
           },
 
-          items: const [
+          items:  [
             CurvedNavigationBarItem(
               child: Icon(Icons.home, color: Colors.white),
               label: 'Home',
+              labelStyle: GoogleFonts.roboto(color: Colors.black87),
+
             ),
             CurvedNavigationBarItem(
-              child: Icon(Icons.search, color: Colors.white),
-              label: 'Search',
+              child: Icon(Icons.edit_calendar, color: Colors.white),
+              label: 'Add Task',
+              labelStyle: GoogleFonts.roboto(color: Colors.black87),
             ),
             CurvedNavigationBarItem(
               child: Icon(Icons.person, color: Colors.white),
               label: 'Profile',
+              labelStyle: GoogleFonts.roboto(color: Colors.black87),
             ),
+
           ],
         ),
       ),

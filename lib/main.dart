@@ -8,8 +8,13 @@ import 'package:my_day_app/ui/screens/onboarding/onboarding_screen.dart';
 import 'package:my_day_app/ui/screens/sign_in/sign_in_screen.dart';
 import 'package:my_day_app/ui/screens/splash_screen.dart';
 import 'package:my_day_app/utils/page_navigation_routes.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
 }
 
