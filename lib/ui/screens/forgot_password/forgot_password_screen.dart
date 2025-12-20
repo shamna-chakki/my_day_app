@@ -1,15 +1,22 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:my_day_app/ui/screens/sign_in/sign_in_screen.dart';
+import 'package:my_day_app/providers/auth_provider.dart';
+import 'package:my_day_app/ui/widgets/custom_text_field.dart';
+import 'package:my_day_app/utils/page_navigation_routes.dart';
+import 'package:provider/provider.dart';
 
 class ForgotPasswordScreen extends StatelessWidget {
   const ForgotPasswordScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ForgotSPasswordMainBlock();
+    return ChangeNotifierProvider<AuthProvider>(
+      create: (context) => AuthProvider(),
+      child: ForgotSPasswordMainBlock(),
+    );
   }
 }
 
@@ -17,23 +24,26 @@ class ForgotSPasswordMainBlock extends StatefulWidget {
   const ForgotSPasswordMainBlock({super.key});
 
   @override
-  State<ForgotSPasswordMainBlock> createState() => _ForgotSPasswordMainBlockState();
+  State<ForgotSPasswordMainBlock> createState() =>
+      _ForgotSPasswordMainBlockState();
 }
 
 class _ForgotSPasswordMainBlockState extends State<ForgotSPasswordMainBlock> {
-
   final PageController _pageController = PageController();
   int _currentStep = 0;
 
   // Controllers
   final _emailController = TextEditingController();
-  final _otpController = TextEditingController();
+  final List<TextEditingController> _otpControllers = List.generate(
+    6,
+    (_) => TextEditingController(),
+  );
+  final List<FocusNode> _otpFocusNodes = List.generate(6, (_) => FocusNode());
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
   // Form keys
   final _emailFormKey = GlobalKey<FormState>();
-  final _otpFormKey = GlobalKey<FormState>();
   final _passwordFormKey = GlobalKey<FormState>();
 
   // State
@@ -43,11 +53,18 @@ class _ForgotSPasswordMainBlockState extends State<ForgotSPasswordMainBlock> {
   int _remainingTime = 60;
   Timer? _timer;
 
+  String? _generatedOTP;
+
   @override
   void dispose() {
     _pageController.dispose();
     _emailController.dispose();
-    _otpController.dispose();
+    for (var controller in _otpControllers) {
+      controller.dispose();
+    }
+    for (var node in _otpFocusNodes) {
+      node.dispose();
+    }
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
     _timer?.cancel();
@@ -80,9 +97,193 @@ class _ForgotSPasswordMainBlockState extends State<ForgotSPasswordMainBlock> {
       );
     }
   }
+
+  // Future<void> _sendOTP() async {
+  //   if (!_emailFormKey.currentState!.validate()) return;
+  //
+  //   setState(() => _isLoading = true);
+  //
+  //   try {
+  //     final isUserExists = await context.read<AuthProvider>().checkUserExists(
+  //       email: _emailController.text.trim(),
+  //     );
+  //
+  //     if (!isUserExists) {
+  //       _showSnackBar('User not found', isError: true);
+  //       return;
+  //     }
+  //     else{
+  //       final random = Random();
+  //       _generatedOTP = List.generate(6, (_) => random.nextInt(10)).join();
+  //
+  //       debugPrint('OTP: $_generatedOTP');
+  //
+  //       _startTimer();
+  //       _nextStep();
+  //
+  //     }
+  //
+  //
+  //   } catch (e) {
+  //     _showSnackBar(e.toString(), isError: true);
+  //   } finally {
+  //     setState(() => _isLoading = false);
+  //   }
+  // }
+
+  // Send OTP to email
+  Future<void> _sendOTP() async {
+    setState(() => _isLoading = false);
+    if (!_emailFormKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final Random random = Random();
+      String otp = '';
+      // Generate random digits and append to the string
+      for (int i = 0; i < 6; i++) {
+        otp += random.nextInt(10).toString();
+      }
+      _generatedOTP = otp;
+
+      _showSnackBar('OTP = $_generatedOTP');
+      _startTimer();
+      _nextStep();
+    } catch (e) {
+      _showSnackBar(e.toString(), isError: true);
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _verifyOTP() async {
+    final enteredOTP = _otpControllers.map((c) => c.text).join();
+
+    if (enteredOTP.length != 6) {
+      _showSnackBar('Enter complete OTP', isError: true);
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      if (enteredOTP == _generatedOTP) {
+        _showSnackBar('OTP verified');
+        _nextStep();
+      } else {
+        _showSnackBar('Invalid OTP', isError: true);
+      }
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  // Verify OTP
+  // Future<void> _verifyOTP() async {
+  //   String enteredOTP = _otpControllers.map((c) => c.text).join();
+  //
+  //   if (enteredOTP.length != 6) {
+  //     _showSnackBar('Please enter complete OTP', isError: true);
+  //     return;
+  //   }
+  //
+  //   setState(() => _isLoading = true);
+  //
+  //   try {
+  //     if (_generatedOTP == enteredOTP) {
+  //       // Temporary simulation - Remove this when OTPService is ready
+  //       await Future.delayed(const Duration(seconds: 2));
+  //       _showSnackBar('OTP verified successfully!');
+  //       _nextStep();
+  //     } else {
+  //       _showSnackBar('Error: $e', isError: true);
+  //     }
+  //   } catch (e) {
+  //     _showSnackBar('Error: $e', isError: true);
+  //   } finally {
+  //     setState(() => _isLoading = false);
+  //   }
+  // }
+
+  // Resend OTP
+  Future<void> _resendOTP() async {
+    if (_remainingTime > 0) return;
+
+    for (var c in _otpControllers) {
+      c.clear();
+    }
+
+    await _sendOTP();
+  }
+
+  // Future<void> _sendEmail() async {
+  //   setState(() => _isLoading = true);
+  //
+  //   try {
+  //     final result = await context.read<AuthProvider>().sendEmail(
+  //       _emailController.text,
+  //     );
+  //     if (result == true) {
+  //       _showSnackBar('Please check your mail,', isError: false);
+  //
+  //     }
+  //   } catch (e) {
+  //     _showSnackBar(e.toString(), isError: true);
+  //   } finally {
+  //     if (mounted) {
+  //       setState(() => _isLoading = false);
+  //     }
+  //   }
+  // }
+
+  Future<void> _sendEmail() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final result = await context.read<AuthProvider>().sendEmail(
+        _emailController.text.trim(),
+      );
+
+      if (result == true) {
+        _showSnackBar('Please check your mail', isError: false);
+
+        Future.delayed(const Duration(seconds: 1), () {
+          if (!mounted) return;
+          Navigator.pushReplacementNamed(
+            context,
+            PageNavigationRoutes.signInScreen,
+          );
+        });
+      } else {
+        _showSnackBar('User not found', isError: true);
+      }
+    } catch (e) {
+      _showSnackBar(e.toString(), isError: true);
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFFAF9EE),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -95,24 +296,23 @@ class _ForgotSPasswordMainBlockState extends State<ForgotSPasswordMainBlock> {
                   pinned: false,
                   leading: _currentStep > 0
                       ? IconButton(
-                    icon: const Icon(
-                      Icons.arrow_back,
-                      color: Color(0xFF6C6767),
-                    ),
-                    onPressed: () {
-                      if (_currentStep > 0) {
-                        setState(() {
-                          _currentStep--;
-                        });
-                        _pageController.animateToPage(
-                          _currentStep,
-                          duration: const Duration(milliseconds: 400),
-                          curve: Curves.easeInOut,
-                        );
-                      }
-
-                    },
-                  )
+                          icon: const Icon(
+                            Icons.arrow_back,
+                            color: Color(0xFF6C6767),
+                          ),
+                          onPressed: () {
+                            if (_currentStep > 0) {
+                              setState(() {
+                                _currentStep--;
+                              });
+                              _pageController.animateToPage(
+                                _currentStep,
+                                duration: const Duration(milliseconds: 400),
+                                curve: Curves.easeInOut,
+                              );
+                            }
+                          },
+                        )
                       : null,
                 ),
                 SliverPadding(
@@ -169,29 +369,22 @@ class _ForgotSPasswordMainBlockState extends State<ForgotSPasswordMainBlock> {
               decoration: BoxDecoration(
                 color: index <= _currentStep
                     ? const Color(0xFFA2AF9B)
-                    : Color(0x80FFFFFF).withValues(alpha: 0.5),
+                    : const Color(0xFFFFFFFF).withValues(alpha: 0.5),
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: const Color(0xFFA2AF9B),
-                  width: 2,
-                ),
+                border: Border.all(color: const Color(0xFFA2AF9B), width: 2),
               ),
               child: Center(
                 child: index < _currentStep
-                    ? const Icon(
-                  Icons.check,
-                  color: Colors.white,
-                  size: 20,
-                )
+                    ? const Icon(Icons.check, color: Colors.white, size: 20)
                     : Text(
-                  '${index + 1}',
-                  style: GoogleFonts.openSans(
-                    color: index <= _currentStep
-                        ? Colors.white
-                        : const Color(0xFF6C6767),
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                        '${index + 1}',
+                        style: GoogleFonts.openSans(
+                          color: index <= _currentStep
+                              ? Colors.white
+                              : const Color(0xFF6C6767),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
             if (index < 2)
@@ -201,7 +394,7 @@ class _ForgotSPasswordMainBlockState extends State<ForgotSPasswordMainBlock> {
                 height: 2,
                 color: index < _currentStep
                     ? const Color(0xFFA2AF9B)
-                    : Color(0x80FFFFFF).withValues(alpha: 0.5),
+                    : const Color(0xFFFFFFFF).withValues(alpha: 0.5),
               ),
           ],
         );
@@ -237,29 +430,14 @@ class _ForgotSPasswordMainBlockState extends State<ForgotSPasswordMainBlock> {
               ),
             ),
             const SizedBox(height: 40),
-            _buildTextField(
+            CustomTextField(
               label: 'Enter Email ID',
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
-              validator: _validateEmail,
+              validatorType: "email",
             ),
             const SizedBox(height: 32),
-            _buildButton(
-              'Send OTP',
-                  () async {
-                if (_emailFormKey.currentState!.validate()) {
-                  setState(() {
-                    _isLoading = true;
-                  });
-                  await Future.delayed(const Duration(seconds: 2));
-                  setState(() {
-                    _isLoading = false;
-                  });
-                  _startTimer();
-                  _nextStep();
-                }
-              },
-            ),
+            _buildButton('Send OTP', _sendOTP),
           ],
         ),
       ),
@@ -268,90 +446,64 @@ class _ForgotSPasswordMainBlockState extends State<ForgotSPasswordMainBlock> {
 
   Widget _buildOTPStep() {
     return SingleChildScrollView(
-      child: Form(
-        key: _otpFormKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildIllustration(Icons.mail_outline),
-            const SizedBox(height: 32),
-            Text(
-              'Verify OTP',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.openSans(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF6C6767),
-              ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildIllustration(Icons.mail_outline),
+          const SizedBox(height: 32),
+          Text(
+            'Verify OTP',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.openSans(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF6C6767),
             ),
-            const SizedBox(height: 12),
-            Text(
-              'Enter the 6-digit code sent to\n${_emailController.text}',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.openSans(
-                fontSize: 16,
-                color: const Color(0xFF6C6767),
-              ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Enter the 6-digit code sent to\n${_emailController.text}',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.openSans(
+              fontSize: 16,
+              color: const Color(0xFF6C6767),
             ),
-            const SizedBox(height: 40),
-            _buildOTPFields(),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Did\'t receive code? ',
+          ),
+          const SizedBox(height: 40),
+          _buildOTPFields(),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Didn\'t receive code? ',
+                style: GoogleFonts.openSans(
+                  color: const Color(0xFF6C6767),
+                  fontSize: 14,
+                ),
+              ),
+              TextButton(
+                onPressed: _remainingTime == 0 && !_isLoading
+                    ? _resendOTP
+                    : null,
+                child: Text(
+                  _remainingTime > 0
+                      ? 'Resend in ${_remainingTime}s'
+                      : 'Resend',
                   style: GoogleFonts.openSans(
-                    color: const Color(0xFF6C6767),
+                    color: _remainingTime > 0
+                        ? const Color(0xFF6C6767).withValues(alpha: 0.5)
+                        : const Color(0xFFA2AF9B),
                     fontSize: 14,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                TextButton(
-                  onPressed: _remainingTime == 0
-                      ? () {
-                    _startTimer();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('OTP Resent!')),
-                    );
-                  }
-                      : null,
-                  child: Text(
-                    _remainingTime > 0
-                        ? 'Resend in ${_remainingTime}s'
-                        : 'Resend',
-                    style: GoogleFonts.openSans(
-                      color: _remainingTime > 0
-                          ? const Color(0xFF6C6767).withValues(alpha: 0.5)
-                          : const Color(0xFFA2AF9B),
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
-            _buildButton(
-              'Verify OTP',
-                  () async {
-                if (_otpController.text.length == 6) {
-                  setState(() {
-                    _isLoading = true;
-                  });
-                  await Future.delayed(const Duration(seconds: 2));
-                  setState(() {
-                    _isLoading = false;
-                  });
-                  _nextStep();
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter valid OTP')),
-                  );
-                }
-              },
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+          _buildButton('Verify OTP', _verifyOTP),
+        ],
       ),
     );
   }
@@ -376,63 +528,17 @@ class _ForgotSPasswordMainBlockState extends State<ForgotSPasswordMainBlock> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Create a strong password',
+              'You can change password only through ur email, Please check ur mail after click on Send Mail button',
               textAlign: TextAlign.center,
               style: GoogleFonts.openSans(
                 fontSize: 16,
                 color: const Color(0xFF6C6767),
               ),
             ),
-            const SizedBox(height: 40),
-            _buildTextField(
-              label: 'New Password',
-              controller: _newPasswordController,
-              isPassword: true,
-              isPasswordVisible: _isNewPasswordVisible,
-              onTogglePassword: () {
-                setState(() {
-                  _isNewPasswordVisible = !_isNewPasswordVisible;
-                });
-              },
-              validator: _validatePassword,
-            ),
-            const SizedBox(height: 20),
-            _buildTextField(
-              label: 'Confirm Password',
-              controller: _confirmPasswordController,
-              isPassword: true,
-              isPasswordVisible: _isConfirmPasswordVisible,
-              onTogglePassword: () {
-                setState(() {
-                  _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
-                });
-              },
-              validator: (value) {
-                if (value != _newPasswordController.text) {
-                  return 'Passwords do not match';
-                }
-                return null;
-              },
-            ),
+
             const SizedBox(height: 32),
-            _buildButton(
-              'Reset Password',
-                  () async {
-                if (_passwordFormKey.currentState!.validate()) {
-                  setState(() {
-                    _isLoading = true;
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => SignInScreen(),));
-                  });
-                  // await Future.delayed(const Duration(seconds: 2));
-                  // setState(() {
-                  //   _isLoading = false;
-                  // });
-                  // if (context.mounted) {
-                  //  return;
-                  // }
-                }
-              },
-            ),
+
+            _buildButton('Send Mail', _sendEmail),
           ],
         ),
       ),
@@ -441,26 +547,10 @@ class _ForgotSPasswordMainBlockState extends State<ForgotSPasswordMainBlock> {
 
   Widget _buildIllustration(IconData icon) {
     return SizedBox(
-      //replaced container.
       width: 200,
       height: 100,
-      // decoration: BoxDecoration(
-      //   color: Color(0xFFDCCFC0).withValues(alpha: 0.2),
-      //   borderRadius: BorderRadius.circular(24),
-      //   boxShadow: [
-      //     BoxShadow(
-      //       color: Color(0x80FF0000).withValues(alpha: 0.5),
-      //       blurRadius: 20,
-      //       offset: const Offset(0, 8),
-      //     ),
-      //   ],
-      // ),
       child: Center(
-        child: Icon(
-          icon,
-          size: 80,
-          color: const Color(0xFFA2AF9B),
-        ),
+        child: Icon(icon, size: 80, color: const Color(0xFFA2AF9B)),
       ),
     );
   }
@@ -472,6 +562,8 @@ class _ForgotSPasswordMainBlockState extends State<ForgotSPasswordMainBlock> {
         return SizedBox(
           width: 50,
           child: TextFormField(
+            controller: _otpControllers[index],
+            focusNode: _otpFocusNodes[index],
             textAlign: TextAlign.center,
             keyboardType: TextInputType.number,
             maxLength: 1,
@@ -483,7 +575,7 @@ class _ForgotSPasswordMainBlockState extends State<ForgotSPasswordMainBlock> {
             decoration: InputDecoration(
               counterText: '',
               filled: true,
-              fillColor: Color(0x80FFFFFF).withValues(alpha: 0.7),
+              fillColor: const Color(0xFFFFFFFF).withValues(alpha: 0.7),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(
@@ -506,18 +598,15 @@ class _ForgotSPasswordMainBlockState extends State<ForgotSPasswordMainBlock> {
             ),
             onChanged: (value) {
               if (value.length == 1 && index < 5) {
-                FocusScope.of(context).nextFocus();
+                _otpFocusNodes[index + 1].requestFocus();
+              } else if (value.isEmpty && index > 0) {
+                _otpFocusNodes[index - 1].requestFocus();
               }
-              _otpController.text = _buildOTPString();
             },
           ),
         );
       }),
     );
-  }
-
-  String _buildOTPString() {
-    return '111111';
   }
 
   Widget _buildTextField({
@@ -546,12 +635,10 @@ class _ForgotSPasswordMainBlockState extends State<ForgotSPasswordMainBlock> {
           keyboardType: keyboardType,
           obscureText: isPassword && !isPasswordVisible,
           validator: validator,
-          style: GoogleFonts.openSans(
-            color: const Color(0xFF6C6767),
-          ),
+          style: GoogleFonts.openSans(color: const Color(0xFF6C6767)),
           decoration: InputDecoration(
             filled: true,
-            fillColor: Color(0x80FFFFFF).withValues(alpha: 0.7),
+            fillColor: const Color(0xFFFFFFFF).withValues(alpha: 0.7),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(30),
               borderSide: BorderSide(
@@ -566,16 +653,11 @@ class _ForgotSPasswordMainBlockState extends State<ForgotSPasswordMainBlock> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(30),
-              borderSide: const BorderSide(
-                color: Color(0xFFA2AF9B),
-                width: 2,
-              ),
+              borderSide: const BorderSide(color: Color(0xFFA2AF9B), width: 2),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(30),
-              borderSide: const BorderSide(
-                color: Colors.red,
-              ),
+              borderSide: const BorderSide(color: Colors.red),
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 24,
@@ -583,14 +665,14 @@ class _ForgotSPasswordMainBlockState extends State<ForgotSPasswordMainBlock> {
             ),
             suffixIcon: isPassword
                 ? IconButton(
-              icon: Icon(
-                isPasswordVisible
-                    ? Icons.visibility_outlined
-                    : Icons.visibility_off_outlined,
-                color: const Color(0xFF6C6767),
-              ),
-              onPressed: onTogglePassword,
-            )
+                    icon: Icon(
+                      isPasswordVisible
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      color: const Color(0xFF6C6767),
+                    ),
+                    onPressed: onTogglePassword,
+                  )
                 : null,
           ),
         ),
@@ -603,44 +685,46 @@ class _ForgotSPasswordMainBlockState extends State<ForgotSPasswordMainBlock> {
       height: 56,
       child: ElevatedButton(
         onPressed: _isLoading ? null : onPressed,
+        // onPressed: () async {
+        //   final result = await context
+        //       .read<AuthProvider>()
+        //       .sendForgotPasswordEmail(_emailController.text);
+        //   if (result == true) {
+        //     _showSnackBar('Password reset link sent to your email',isError: false);
+        //   }else{
+        //     _showSnackBar('User Not Found',isError: true);
+        //   }
+        // },
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFFA2AF9B),
           foregroundColor: Colors.white,
           elevation: 0,
-          disabledBackgroundColor: const Color(0xFFA2AF9B).withValues(alpha: 0.5),
+          disabledBackgroundColor: const Color(
+            0xFFA2AF9B,
+          ).withValues(alpha: 0.5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(30),
           ),
         ),
         child: _isLoading
             ? const SizedBox(
-          width: 24,
-          height: 24,
-          child: CircularProgressIndicator(
-            color: Colors.white,
-            strokeWidth: 2,
-          ),
-        )
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
             : Text(
-          text,
-          style: GoogleFonts.openSans(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
+                text,
+                style: GoogleFonts.openSans(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
       ),
     );
-  }
-
-  String? _validateEmail(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter your email';
-    }
-    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-      return 'Please enter a valid email';
-    }
-    return null;
   }
 
   String? _validatePassword(String? value) {
@@ -653,7 +737,3 @@ class _ForgotSPasswordMainBlockState extends State<ForgotSPasswordMainBlock> {
     return null;
   }
 }
-
-
-
-

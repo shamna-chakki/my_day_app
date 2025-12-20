@@ -1,6 +1,10 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:my_day_app/providers/auth_provider.dart';
 import 'package:my_day_app/utils/page_navigation_routes.dart';
+import 'package:provider/provider.dart';
 
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
@@ -30,6 +34,7 @@ class _SignInScreenMainBlockState extends State<SignInScreenMainBlock>
   // Controllers
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
@@ -44,6 +49,7 @@ class _SignInScreenMainBlockState extends State<SignInScreenMainBlock>
     _tabController.dispose();
     _nameController.dispose();
     _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -145,10 +151,13 @@ class _SignInScreenMainBlockState extends State<SignInScreenMainBlock>
 
   Widget _buildTabContent() {
     return SizedBox(
-      height: 500,
-      child: TabBarView(
-        controller: _tabController,
-        children: [_buildSignInForm(), _buildRegisterForm()],
+      height: 600,
+      child: ChangeNotifierProvider(
+        create: (context) => AuthProvider(),
+        child: TabBarView(
+          controller: _tabController,
+          children: [_buildSignInForm(), _buildRegisterForm()],
+        ),
       ),
     );
   }
@@ -194,13 +203,49 @@ class _SignInScreenMainBlockState extends State<SignInScreenMainBlock>
           ),
           const SizedBox(height: 24),
 
-          CustomButton(
-            text: "Login",
-            onPressed: () {
-              if (_formKey.currentState!.validate()) {
-                // Navigator.push(context, MaterialPageRoute(builder: (context) => HomeScreen(),));
-                Navigator.pushNamed(context, PageNavigationRoutes.homeScreen);
-              }
+          Consumer<AuthProvider>(
+            builder: (context, auth, child) {
+              return CustomButton(
+                text: "Login",
+                onPressed: () async {
+                  if (_formKey.currentState!.validate()) {
+                    final result = await auth.login(
+                      email: _emailController.text,
+                      password: _passwordController.text,
+                    );
+
+                    if (!context.mounted) return;
+
+                    if (result) {
+                      log('Logged in successfully...!!',name: 'Logged Result : ');
+                      Navigator.pushNamed(
+                        context,
+                        PageNavigationRoutes.homeScreen,
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            auth.error.toString(),
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          backgroundColor: Colors.red,
+                          action: SnackBarAction(
+                            label: 'Dismiss',
+                            onPressed: () {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(
+                                  context,
+                                ).hideCurrentSnackBar();
+                              }
+                            },
+                          ),
+                        ),
+                      );
+                    }
+                  }
+                },
+              );
             },
           ),
         ],
@@ -230,6 +275,14 @@ class _SignInScreenMainBlockState extends State<SignInScreenMainBlock>
           const SizedBox(height: 20),
 
           CustomTextField(
+            label: 'Phone Number',
+            controller: _phoneController,
+            keyboardType: TextInputType.number,
+            validatorType: "Phone Number",
+          ),
+          const SizedBox(height: 20),
+
+          CustomTextField(
             label: 'Password',
             controller: _passwordController,
             isPassword: true,
@@ -242,19 +295,64 @@ class _SignInScreenMainBlockState extends State<SignInScreenMainBlock>
             controller: _confirmPasswordController,
             isPassword: true,
             validatorType: "confirm",
-            compareWith: _passwordController, // ✅ IMPORTANT
+            compareWith: _passwordController,
           ),
           const SizedBox(height: 32),
 
-          CustomButton(
-            text: "Register",
-            onPressed: () {
-              // ✅ Correct form being validated
-              if (_regFormKey.currentState!.validate()) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Registering...')),
-                );
-              }
+          Consumer<AuthProvider>(
+            builder: (context, authObj, child) {
+              return CustomButton(
+                text: "Register",
+                onPressed: () async {
+                  if (_regFormKey.currentState!.validate()) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Registering...')),
+                    );
+
+                    final result = await authObj.signUp(
+                      email: _emailController.text,
+                      password: _confirmPasswordController.text,
+                      userName: _nameController.text,
+                      phone: _phoneController.text,
+                    );
+
+                    if (!context.mounted) return;
+
+                    if (result) {
+                      log('Registration Successfully completed',name: 'Registration Result :');
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Registration Successfully completed'),
+                          backgroundColor: Colors.green, // Set the background color to green
+                          duration: Duration(seconds: 1), // Optional: set how long it is visible
+                        ),
+                      );
+                      _tabController.animateTo(0);
+
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            authObj.error.toString(),
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          backgroundColor: Colors.red,
+                          action: SnackBarAction(
+                            label: 'Dismiss',
+                            onPressed: () {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(
+                                  context,
+                                ).hideCurrentSnackBar();
+                              }
+                            },
+                          ),
+                        ),
+                      );
+                    }
+                  }
+                },
+              );
             },
           ),
         ],
@@ -262,57 +360,56 @@ class _SignInScreenMainBlockState extends State<SignInScreenMainBlock>
     );
   }
 }
-  // Widget _buildRegisterForm() {
-  //   return Form(
-  //     key: _regFormKey,
-  //     child: Column(
-  //       crossAxisAlignment: CrossAxisAlignment.stretch,
-  //       children: [
-  //         CustomTextField(
-  //           label: "Name",
-  //           controller: _nameController,
-  //           validatorType: "name",
-  //         ),
-  //         const SizedBox(height: 20),
-  //
-  //         CustomTextField(
-  //           label: 'Email ID',
-  //           controller: _emailController,
-  //           keyboardType: TextInputType.emailAddress,
-  //           validatorType: "email",
-  //         ),
-  //         const SizedBox(height: 20),
-  //
-  //         CustomTextField(
-  //           label: 'Password',
-  //           controller: _passwordController,
-  //           isPassword: true,
-  //           validatorType: "password",
-  //         ),
-  //         const SizedBox(height: 20),
-  //
-  //         CustomTextField(
-  //           label: 'Re-Enter Password',
-  //           controller: _confirmPasswordController,
-  //           isPassword: true,
-  //           validatorType: "confirm",
-  //         ),
-  //         const SizedBox(height: 32),
-  //         CustomButton(
-  //           text: "Register",
-  //           onPressed: () {
-  //             if (_formKey.currentState!.validate()) {
-  //               ScaffoldMessenger.of(
-  //                 context,
-  //               ).showSnackBar(const SnackBar(content: Text('Registering...')));
-  //             }
-  //           },
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-
+// Widget _buildRegisterForm() {
+//   return Form(
+//     key: _regFormKey,
+//     child: Column(
+//       crossAxisAlignment: CrossAxisAlignment.stretch,
+//       children: [
+//         CustomTextField(
+//           label: "Name",
+//           controller: _nameController,
+//           validatorType: "name",
+//         ),
+//         const SizedBox(height: 20),
+//
+//         CustomTextField(
+//           label: 'Email ID',
+//           controller: _emailController,
+//           keyboardType: TextInputType.emailAddress,
+//           validatorType: "email",
+//         ),
+//         const SizedBox(height: 20),
+//
+//         CustomTextField(
+//           label: 'Password',
+//           controller: _passwordController,
+//           isPassword: true,
+//           validatorType: "password",
+//         ),
+//         const SizedBox(height: 20),
+//
+//         CustomTextField(
+//           label: 'Re-Enter Password',
+//           controller: _confirmPasswordController,
+//           isPassword: true,
+//           validatorType: "confirm",
+//         ),
+//         const SizedBox(height: 32),
+//         CustomButton(
+//           text: "Register",
+//           onPressed: () {
+//             if (_formKey.currentState!.validate()) {
+//               ScaffoldMessenger.of(
+//                 context,
+//               ).showSnackBar(const SnackBar(content: Text('Registering...')));
+//             }
+//           },
+//         ),
+//       ],
+//     ),
+//   );
+// }
 
 // Widget _buildTextField({
 //   required String label,

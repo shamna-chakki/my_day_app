@@ -38,6 +38,11 @@ class _CustomTextFieldState extends State<CustomTextField> {
       if (value == null || value.isEmpty) return "Please enter your name";
     }
 
+    if (widget.validatorType == "phone") {
+      if (value == null || value.isEmpty) return "Please enter phone number";
+    }
+
+
     if (widget.validatorType == "email") {
       if (value == null || value.isEmpty) return "Please enter your email";
       if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
